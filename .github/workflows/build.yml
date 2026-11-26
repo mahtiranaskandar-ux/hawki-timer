@@ -18,19 +18,21 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Setup Android NDK
+      - name: Install Android NDK
+        id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r27c
           add-to-path: false
 
-      - name: Verify NDK
+      - name: Set NDK Environment
+        run: |
+          echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
+
+      - name: Verify Toolchain
         shell: bash
         run: |
-          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME"
+          echo "NDK: $ANDROID_NDK_HOME"
 
           test -x "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang"
 
