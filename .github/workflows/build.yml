@@ -3,39 +3,60 @@ name: Build Hawki Timer
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
   contents: read
 
 jobs:
   build:
+    name: Android ARM64 API 34
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Android NDK
-        run: |
-          sdkmanager --install "ndk;27.2.12479018"
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Build
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+          add-to-path: false
+
+      - name: Verify NDK
         shell: bash
         run: |
-          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME"
 
+          test -x "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang"
+
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang" --version
+
+      - name: Build Hawki
+        shell: bash
+        run: |
           "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang" \
             -O2 -std=gnu11 -static -fno-stack-protector -fno-pic \
             -ffunction-sections -fdata-sections hawki.c -o timer \
             -Wl,--gc-sections -Wl,-s -Wl,--build-id=none \
             -Wl,-z,norelro -pthread
 
+      - name: Verify Binary
+        shell: bash
+        run: |
           file timer
           readelf -h timer
+          readelf -l timer
+          sha256sum timer
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: hawki-timer-arm64-api34
+          name: hawki-timer-android-arm64-api34
           path: timer
+          if-no-files-found: error
+          retention-days: 30
