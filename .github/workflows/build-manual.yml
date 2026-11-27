@@ -1,0 +1,101 @@
+name: Manual C Builder
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_file:
+        description: "C source file to build (e.g. timer_posix.c)"
+        required: true
+        type: string
+        default: "timer_posix.c"
+
+      output_name:
+        description: "Output binary name (without extension)"
+        required: true
+        type: string
+        default: "timer_posix"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Android ARM64 API 34
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Android NDK
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+          add-to-path: false
+
+      - name: Validate Inputs
+        shell: bash
+        env:
+          SOURCE_FILE: ${{ inputs.source_file }}
+          OUTPUT_NAME: ${{ inputs.output_name }}
+        run: |
+          set -euo pipefail
+
+          # Accept only a C file in the repository root.
+          if [[ "$SOURCE_FILE" != *.c || "$SOURCE_FILE" == */* || "$SOURCE_FILE" == .* ]]; then
+            echo "Error: source_file must be a .c file in the repository root."
+            exit 1
+          fi
+
+          # Restrict output to a simple filename.
+          if [[ ! "$OUTPUT_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+            echo "Error: output_name may contain only letters, numbers, _ and -."
+            exit 1
+          fi
+
+          test -f "$SOURCE_FILE" || {
+            echo "Error: source file not found: $SOURCE_FILE"
+            exit 1
+          }
+
+      - name: Build Selected File
+        shell: bash
+        env:
+          SOURCE_FILE: ${{ inputs.source_file }}
+          OUTPUT_NAME: ${{ inputs.output_name }}
+        run: |
+          set -euo pipefail
+
+          CLANG="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang"
+
+          "$CLANG" \
+            -O2 -std=gnu11 -static \
+            -fno-stack-protector -fno-pic \
+            -ffunction-sections -fdata-sections \
+            "$SOURCE_FILE" \
+            -o "$OUTPUT_NAME" \
+            -Wl,--gc-sections \
+            -Wl,-s \
+            -Wl,--build-id=none \
+            -Wl,-z,norelro \
+            -pthread
+
+      - name: Verify Binary
+        shell: bash
+        env:
+          OUTPUT_NAME: ${{ inputs.output_name }}
+        run: |
+          set -euo pipefail
+          file "$OUTPUT_NAME"
+          readelf -h "$OUTPUT_NAME"
+          readelf -l "$OUTPUT_NAME"
+          sha256sum "$OUTPUT_NAME"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: manual-build-${{ inputs.output_name }}
+          path: ${{ inputs.output_name }}
+          if-no-files-found: error
+          retention-days: 30
