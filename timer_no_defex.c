@@ -114,7 +114,6 @@
 #define INIT_UCOUNTS_STATIC 0xffffffc00a7bf678ULL
 #define INIT_GROUPS_STATIC 0xffffffc00a7c0b08ULL
 #define SELINUX_BLOB_OFF 0x0ULL
-#define DEFEX_CREDS_HASH 0xffffffc00a3493b0ULL
 #define KSU_KMI "android12-5.10"
 
 /* ==================== GENERATED END ==================== */
@@ -138,7 +137,6 @@ static int g_ready_w = -1, g_ack_r = -1, g_tid_w = -1;
 static int g_timer_go_r = -1, g_timer_go_w = -1;
 static int g_cpu = CPU_TRIG;
 static unsigned long long g_base;
-static unsigned long long g_write_val;
 static unsigned long long g_slide;
 static int g_held;
 static int g_fake_stage;
