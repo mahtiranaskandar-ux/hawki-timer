@@ -1886,7 +1886,7 @@ int main(int argc, char **argv)
         if (shell_mode)
         {
             if (stage_write(0, 0, "selinux", raw, NULL,
-                            SELINUX_STATE_STATIC + g_slide))
+                            SELINUX_STATE_STATIC))
                 park_forever("selinux write failed");
             logf("[+] selinux_state.enforcing cleared (permissive until "
                  "reboot)\n");
